@@ -94,9 +94,9 @@ def __splitSubjects(subjects, validationRatio, testRatio):
 
     shuffledSubjects = np.random.permutation(subjects)
 
-    trainingSubjects = None
-    validationSubjects = None
-    testSubjects = None
+    trainingSubjects = []
+    validationSubjects = []
+    testSubjects = []
 
     if -numOfVal-numOfTest != 0:
         trainingSubjects = shuffledSubjects[:-numOfVal-numOfTest]
@@ -152,14 +152,13 @@ def loadData(subjects=shared.SUBJECTS,
              testRatio=0.2,
              flatten=False):
 
-    trainingX = None
-    trainingLabels = None
-    validationX = None
-    validationLabels = None
-    testX = None
-    testLabels = None
-    numOfVal = 0
-    numOfTest = 0
+    trainingX = []
+    trainingLabels = []
+    validationX = []
+    validationLabels = []
+    testX = []
+    testLabels = []
+
     if splitMode == shared.SPLIT_MODE_CLASSIC:
         subjectsDataDict = raw_data_reader.loadSubjects(subjects)
         subjectsDataDict = __selectColumns(subjectsDataDict, selectedColumns)
@@ -210,7 +209,6 @@ def loadData(subjects=shared.SUBJECTS,
             subjectsDataDict = __calibrate(subjectsDataDict)
             subjectsDataDict = __interpolateDataSet(subjectsDataDict)
             validationX, validationLabels = __toDataset(subjectsDataDict)
-            numOfVal = len(validationX)
         
         if len(testSubjects) > 0:
             subjectsDataDict = raw_data_reader.loadSubjects(testSubjects)
@@ -218,13 +216,12 @@ def loadData(subjects=shared.SUBJECTS,
             subjectsDataDict = __calibrate(subjectsDataDict)
             subjectsDataDict = __interpolateDataSet(subjectsDataDict)
             testX, testLabels = __toDataset(subjectsDataDict)
-            numOfTest = len(testX)
 
     if flatten:
         trainingX = np.squeeze(np.reshape(trainingX, (trainingX.shape[0], 1, -1)))
-        if numOfVal != 0:
+        if len(validationX) > 0:
             validationX = np.squeeze(np.reshape(validationX, (validationX.shape[0], 1, -1)))
-        if numOfTest != 0:
+        if len(testX) > 0:
             testX = np.squeeze(np.reshape(testX, (testX.shape[0], 1, -1)))
 
     return trainingX, trainingLabels, validationX, validationLabels, testX, testLabels
