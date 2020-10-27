@@ -94,9 +94,23 @@ def __splitSubjects(subjects, validationRatio, testRatio):
 
     shuffledSubjects = np.random.permutation(subjects)
 
-    trainingSubjects = shuffledSubjects[:-numOfVal-numOfTest]
-    validationSubjects = shuffledSubjects[-numOfVal-numOfTest:-numOfTest]
-    testSubjects = shuffledSubjects[-numOfTest:]
+    trainingSubjects = None
+    validationSubjects = None
+    testSubjects = None
+
+    if -numOfVal-numOfTest != 0:
+        trainingSubjects = shuffledSubjects[:-numOfVal-numOfTest]
+    else:
+        trainingSubjects = shuffledSubjects
+    
+    if numOfVal != 0:
+        if numOfTest != 0:
+            validationSubjects = shuffledSubjects[-numOfVal-numOfTest:-numOfTest]
+        else:
+            validationSubjects = shuffledSubjects[-numOfVal:]
+    
+    if numOfTest != 0:
+        testSubjects = shuffledSubjects[-numOfTest:]
 
     return trainingSubjects, validationSubjects, testSubjects
 
@@ -138,6 +152,14 @@ def loadData(subjects=shared.SUBJECTS,
              testRatio=0.2,
              flatten=False):
 
+    trainingX = None
+    trainingLabels = None
+    validationX = None
+    validationLabels = None
+    testX = None
+    testLabels = None
+    numOfVal = 0
+    numOfTest = 0
     if splitMode == shared.SPLIT_MODE_CLASSIC:
         subjectsDataDict = raw_data_reader.loadSubjects(subjects)
         subjectsDataDict = __selectColumns(subjectsDataDict, selectedColumns)
@@ -152,16 +174,26 @@ def loadData(subjects=shared.SUBJECTS,
         numOfVal = int(xs.shape[0]*validationRatio)
         numOfTest = int(xs.shape[0]*testRatio)
 
-        trainingX = xs[:-numOfVal-numOfTest]
-        trainingLabels = labels[:-numOfVal-numOfTest]
+        if -numOfVal-numOfTest != 0:
+            trainingX = xs[:-numOfVal-numOfTest]
+            trainingLabels = labels[:-numOfVal-numOfTest]
+        else:
+            trainingX = xs
+            trainingLabels = labels
 
         trainingX, trainingLabels = __augmentTrainingSet(trainingX, trainingLabels, augmentProp)
 
-        validationX = xs[-numOfVal-numOfTest:-numOfTest]
-        validationLabels = labels[-numOfVal-numOfTest:-numOfTest]
+        if numOfVal != 0:
+            if numOfTest != 0:
+                validationX = xs[-numOfVal-numOfTest:-numOfTest]
+                validationLabels = labels[-numOfVal-numOfTest:-numOfTest]
+            else:
+                validationX = xs[-numOfVal:]
+                validationLabels = labels[-numOfVal:]
 
-        testX = xs[-numOfTest:]
-        testLabels = labels[-numOfTest:]
+        if numOfTest != 0:
+            testX = xs[-numOfTest:]
+            testLabels = labels[-numOfTest:]
         
     elif splitMode == shared.SPLIT_MODE_BY_SUBJECT:
         trainingSubjects, validationSubjects, testSubjects = __splitSubjects(subjects, validationRatio, testRatio)
@@ -172,23 +204,30 @@ def loadData(subjects=shared.SUBJECTS,
         trainingX, trainingLabels = __toDataset(subjectsDataDict)
         trainingX, trainingLabels = __augmentTrainingSet(trainingX, trainingLabels, augmentProp)
 
-        subjectsDataDict = raw_data_reader.loadSubjects(validationSubjects)
-        subjectsDataDict = __selectColumns(subjectsDataDict, selectedColumns)
-        subjectsDataDict = __calibrate(subjectsDataDict)
-        subjectsDataDict = __interpolateDataSet(subjectsDataDict)
-        validationX, validationLabels = __toDataset(subjectsDataDict)
-
-        subjectsDataDict = raw_data_reader.loadSubjects(testSubjects)
-        subjectsDataDict = __selectColumns(subjectsDataDict, selectedColumns)
-        subjectsDataDict = __calibrate(subjectsDataDict)
-        subjectsDataDict = __interpolateDataSet(subjectsDataDict)
-        testX, testLabels = __toDataset(subjectsDataDict)
+        if len(validationSubjects) > 0:
+            subjectsDataDict = raw_data_reader.loadSubjects(validationSubjects)
+            subjectsDataDict = __selectColumns(subjectsDataDict, selectedColumns)
+            subjectsDataDict = __calibrate(subjectsDataDict)
+            subjectsDataDict = __interpolateDataSet(subjectsDataDict)
+            validationX, validationLabels = __toDataset(subjectsDataDict)
+            numOfVal = len(validationX)
+        
+        if len(testSubjects) > 0:
+            subjectsDataDict = raw_data_reader.loadSubjects(testSubjects)
+            subjectsDataDict = __selectColumns(subjectsDataDict, selectedColumns)
+            subjectsDataDict = __calibrate(subjectsDataDict)
+            subjectsDataDict = __interpolateDataSet(subjectsDataDict)
+            testX, testLabels = __toDataset(subjectsDataDict)
+            numOfTest = len(testX)
 
     if flatten:
         trainingX = np.squeeze(np.reshape(trainingX, (trainingX.shape[0], 1, -1)))
-        validationX = np.squeeze(np.reshape(validationX, (validationX.shape[0], 1, -1)))
-        testX = np.squeeze(np.reshape(testX, (testX.shape[0], 1, -1)))
+        if numOfVal != 0:
+            validationX = np.squeeze(np.reshape(validationX, (validationX.shape[0], 1, -1)))
+        if numOfTest != 0:
+            testX = np.squeeze(np.reshape(testX, (testX.shape[0], 1, -1)))
 
     return trainingX, trainingLabels, validationX, validationLabels, testX, testLabels
 
-loadData(flatten=True)
+if __name__ == '__main__':
+    loadData(flatten=True)
