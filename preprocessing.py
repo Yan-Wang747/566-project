@@ -1,3 +1,4 @@
+from torch._C import dtype
 import shared
 import numpy as np
 import raw_data_reader
@@ -126,7 +127,7 @@ def __toDataset(subjectsDataDict):
                 xs.append(sample[:, 2:]) # discard id, td
                 labels.append(labelIndex)
     
-    return np.array(xs), np.array(labels)
+    return np.array(xs, dtype=np.float32), np.array(labels, dtype=np.long)
 
 def __augmentTrainingSet(trainingX, trainingLables, augmentProp):
     aug_xs = []
@@ -142,7 +143,7 @@ def __augmentTrainingSet(trainingX, trainingLables, augmentProp):
             aug_xs.append(augmented_x)
             aug_labels.append(y)
     
-    return np.array(trainingX.tolist() + aug_xs), np.array(trainingLables.tolist() + aug_labels)
+    return np.array(trainingX.tolist() + aug_xs, dtype=np.float32), np.array(trainingLables.tolist() + aug_labels, dtype=np.long)
 
 def loadData(subjects=shared.SUBJECTS,
              selectedColumns=['yaw', 'pitch', 'roll'], 
