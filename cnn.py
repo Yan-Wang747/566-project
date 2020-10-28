@@ -58,13 +58,19 @@ trainingX = trainingX.transpose(0, 2, 1)
 validationX = validationX.transpose(0, 2, 1)
 testX = testX.transpose(0, 2, 1)
 
+trainingX = torch.from_numpy(trainingX).cuda()
+trainingLabels = torch.from_numpy(trainingLabels).long().cuda()
+
+validationX = torch.from_numpy(validationX).cuda()
+
+testX = torch.from_numpy(testX).cuda()
+
+trainingDataset = torch.utils.data.TensorDataset(trainingX, trainingLabels)
+
 BATCH_SIZE = 500
 MAX_ITER = 20
 
-trainLoader = DataLoader(list(zip(trainingX, trainingLabels)), BATCH_SIZE, True)
-
-valInput = torch.from_numpy(validationX).cuda()
-valLabels = torch.from_numpy(validationLabels).long().cuda()
+trainLoader = DataLoader(trainingDataset, BATCH_SIZE, True)
 
 criterion = nn.CrossEntropyLoss()
 optimizer = Adam(net.parameters(), lr=0.001)
@@ -75,8 +81,7 @@ for epoch in range(MAX_ITER):  # loop over the dataset multiple times
     for i, data in enumerate(trainLoader):
         # get the inputs; data is a list of [inputs, labels]
         inputs, labels = data
-        inputs = inputs.cuda()
-        labels = labels.long().cuda()
+
         # zero the parameter gradients
         optimizer.zero_grad()
 
@@ -88,7 +93,7 @@ for epoch in range(MAX_ITER):  # loop over the dataset multiple times
         optimizer.step()
     
     with torch.no_grad():
-        valEnergies = net(valInput)
+        valEnergies = net(validationX)
         _, valPredicts = torch.max(valEnergies, 1)
         valPredicts = valPredicts.cpu().numpy()
         print(print(classification_report(valPredicts, validationLabels)))
