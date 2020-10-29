@@ -92,26 +92,15 @@ def __splitSubjects(subjects, validationRatio, testRatio):
 
     numOfVal = int(len(subjects) * validationRatio)
     numOfTest = int(len(subjects) * testRatio)
+    numOfTrain = len(subjects) - numOfVal - numOfTest
 
     shuffledSubjects = np.random.permutation(subjects)
 
-    trainingSubjects = []
-    validationSubjects = []
-    testSubjects = []
+    trainingSubjects = shuffledSubjects[:numOfTrain]
 
-    if -numOfVal-numOfTest != 0:
-        trainingSubjects = shuffledSubjects[:-numOfVal-numOfTest]
-    else:
-        trainingSubjects = shuffledSubjects
-    
-    if numOfVal != 0:
-        if numOfTest != 0:
-            validationSubjects = shuffledSubjects[-numOfVal-numOfTest:-numOfTest]
-        else:
-            validationSubjects = shuffledSubjects[-numOfVal:]
-    
-    if numOfTest != 0:
-        testSubjects = shuffledSubjects[-numOfTest:]
+    validationSubjects = shuffledSubjects[numOfTrain:numOfTrain+numOfVal]
+        
+    testSubjects = shuffledSubjects[numOfTrain+numOfVal:]
 
     return trainingSubjects, validationSubjects, testSubjects
 
@@ -143,7 +132,19 @@ def __augmentTrainingSet(trainingX, trainingLables, augmentProp):
             aug_xs.append(augmented_x)
             aug_labels.append(y)
     
-    return np.array(trainingX.tolist() + aug_xs, dtype=np.float32), np.array(trainingLables.tolist() + aug_labels, dtype=np.long)
+    return np.array(trainingX.tolist() + aug_xs), np.array(trainingLables.tolist() + aug_labels)
+
+def __normalize(trainingX, validationX, testX):
+    xs = trainingX
+    if len(validationX) > 0:
+        xs = np.concatenate((xs, validationX), axis=0)
+
+    if len(testX) > 0:
+        xs = np.concatenate((xs, testX), axis=0)
+
+    xs = (xs - np.mean(xs, axis=0)) / np.std(xs, axis=0)
+
+    return xs[:len(trainingX)], xs[len(trainingX):len(trainingX)+len(validationX)], xs[len(trainingX)+len(validationX):]
 
 def loadData(subjects=shared.SUBJECTS,
              selectedColumns=['yaw', 'pitch', 'roll'], 
@@ -151,10 +152,11 @@ def loadData(subjects=shared.SUBJECTS,
              splitMode=shared.SPLIT_MODE_CLASSIC,
              validationRatio=0.2,
              testRatio=0.2,
-             flatten=False):
+             flatten=False,
+             normalize=True):
 
-    trainingX = []
-    trainingLabels = []
+    trainingX = None
+    trainingLabels = None
     validationX = []
     validationLabels = []
     testX = []
@@ -173,27 +175,18 @@ def loadData(subjects=shared.SUBJECTS,
 
         numOfVal = int(xs.shape[0]*validationRatio)
         numOfTest = int(xs.shape[0]*testRatio)
+        numOfTrain = len(xs) - numOfVal - numOfTest
 
-        if -numOfVal-numOfTest != 0:
-            trainingX = xs[:-numOfVal-numOfTest]
-            trainingLabels = labels[:-numOfVal-numOfTest]
-        else:
-            trainingX = xs
-            trainingLabels = labels
+        trainingX = xs[:numOfTrain]
+        trainingLabels = labels[:numOfTrain]
 
         trainingX, trainingLabels = __augmentTrainingSet(trainingX, trainingLabels, augmentProp)
 
-        if numOfVal != 0:
-            if numOfTest != 0:
-                validationX = xs[-numOfVal-numOfTest:-numOfTest]
-                validationLabels = labels[-numOfVal-numOfTest:-numOfTest]
-            else:
-                validationX = xs[-numOfVal:]
-                validationLabels = labels[-numOfVal:]
-
-        if numOfTest != 0:
-            testX = xs[-numOfTest:]
-            testLabels = labels[-numOfTest:]
+        validationX = xs[numOfTrain:numOfTrain+numOfVal]
+        validationLabels = labels[numOfTrain:numOfTrain+numOfVal]
+            
+        testX = xs[numOfTrain+numOfVal:]
+        testLabels = labels[numOfTrain+numOfVal:]
         
     elif splitMode == shared.SPLIT_MODE_BY_SUBJECT:
         trainingSubjects, validationSubjects, testSubjects = __splitSubjects(subjects, validationRatio, testRatio)
@@ -225,7 +218,12 @@ def loadData(subjects=shared.SUBJECTS,
         if len(testX) > 0:
             testX = np.squeeze(np.reshape(testX, (testX.shape[0], 1, -1)))
 
-    return trainingX, trainingLabels, validationX, validationLabels, testX, testLabels
+    if normalize:
+        trainingX, validationX, testX = __normalize(trainingX, validationX, testX)
+    
+    return np.array(trainingX, dtype=np.float32), np.array(trainingLabels, dtype=np.long), \
+           np.array(validationX, dtype=np.float32), np.array(validationLabels, dtype=np.long), \
+           np.array(testX, dtype=np.float32), np.array(testLabels, dtype=np.long)
 
 if __name__ == '__main__':
     loadData(flatten=True)
