@@ -102,7 +102,7 @@ MAX_ITER = 20
 trainLoader = DataLoader(trainingDataset, BATCH_SIZE, True)
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.AdamW(net.parameters(), weight_decay=0.01)
+optimizer = optim.Adam(net.parameters(), lr=0.01)
 
 for epoch in range(MAX_ITER):  # loop over the dataset multiple times
     running_loss = 0.0
@@ -116,8 +116,8 @@ for epoch in range(MAX_ITER):  # loop over the dataset multiple times
         optimizer.zero_grad()
 
         # forward + backward + optimize
-        energies = net(inputs)
-        loss = criterion(energies, labels)
+        logits = net(inputs)
+        loss = criterion(logits, labels)
         running_loss += loss.item()
         loss.backward()
         optimizer.step()
@@ -125,8 +125,8 @@ for epoch in range(MAX_ITER):  # loop over the dataset multiple times
     with torch.no_grad():
         net.eval()
 
-        valEnergies = net(validationX)
-        _, valPredicts = torch.max(valEnergies, axis=1)
+        logits = net(validationX)
+        _, valPredicts = torch.max(logits, axis=1)
         valPredicts = valPredicts.cpu().numpy()
         print(classification_report(valPredicts, validationLabels))
     
