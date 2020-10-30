@@ -1,6 +1,5 @@
 import torch
 from torch import optim
-from torch._C import device
 import torch.nn as nn
 import torch.optim
 import numpy as np
@@ -70,3 +69,4 @@ with torch.no_grad():
     _, valPredicts = torch.max(logits, axis=1)
     valPredicts = valPredicts.cpu().numpy()
     print(classification_report(valPredicts, validationLabels))
+    
