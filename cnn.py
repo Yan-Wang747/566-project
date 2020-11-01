@@ -7,7 +7,7 @@ import shared
 from preprocessing import loadData
 from sklearn.metrics import classification_report
 
-class Net(nn.Module):
+class CnnModel(nn.Module):
     def __init__(self):
         super().__init__()
 
@@ -77,8 +77,8 @@ class Net(nn.Module):
         x = self.out(x)
         return x
 
-net = Net()
-net.cuda()
+cnnModel = CnnModel()
+cnnModel.cuda()
 
 trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(augmentProp=4, validationRatio=0.2, testRatio=0.2, flatten=False)
 
@@ -102,11 +102,11 @@ MAX_ITER = 20
 trainLoader = DataLoader(trainingDataset, BATCH_SIZE, True)
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(net.parameters(), lr=0.01)
+optimizer = optim.Adam(cnnModel.parameters(), lr=0.01)
 
 for epoch in range(MAX_ITER):  # loop over the dataset multiple times
     running_loss = 0.0
-    net.train()
+    cnnModel.train()
 
     for i, data in enumerate(trainLoader):
         # get the inputs; data is a list of [inputs, labels]
@@ -116,16 +116,16 @@ for epoch in range(MAX_ITER):  # loop over the dataset multiple times
         optimizer.zero_grad()
 
         # forward + backward + optimize
-        logits = net(inputs)
+        logits = cnnModel(inputs)
         loss = criterion(logits, labels)
         running_loss += loss.item()
         loss.backward()
         optimizer.step()
     
     with torch.no_grad():
-        net.eval()
+        cnnModel.eval()
 
-        logits = net(validationX)
+        logits = cnnModel(validationX)
         _, valPredicts = torch.max(logits, axis=1)
         valPredicts = valPredicts.cpu().numpy()
         print(classification_report(valPredicts, validationLabels))
