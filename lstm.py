@@ -19,18 +19,31 @@ class LstmModel(nn.Module):
         '''
 
         self.lstm = nn.LSTM(3, hidden_dim, n_layers, batch_first=True)
-        self.fc = nn.Linear(hidden_dim, 26, bias = True)
 
-        '''
-        nn.init.orthogonal_(self.W.data, gain=2**0.5)
-        nn.init.orthogonal_(self.U.data, gain=2**0.5)
-        nn.init.zeros_(self.bias)
-        '''
+        for n in range(n_layers):
+            data = getattr(self.lstm, 'weight_ih_l'+str(n)).data
+            nn.init.orthogonal_(data[0:hidden_dim,:], 2**0.5)
+            nn.init.orthogonal_(data[hidden_dim:hidden_dim*2,:], 2**0.5)
+            nn.init.orthogonal_(data[hidden_dim*2:hidden_dim*3,:], 2**0.5)
+            nn.init.orthogonal_(data[hidden_dim*3:hidden_dim*4,:], 2**0.5)
+
+            data = getattr(self.lstm, 'weight_hh_l'+str(n)).data
+            nn.init.orthogonal_(data[0:hidden_dim,:], 2**0.5)
+            nn.init.orthogonal_(data[hidden_dim:hidden_dim*2,:], 2**0.5)
+            nn.init.orthogonal_(data[hidden_dim*2:hidden_dim*3,:], 2**0.5)
+            nn.init.orthogonal_(data[hidden_dim*3:hidden_dim*4,:], 2**0.5)
+
+            data = getattr(self.lstm, 'bias_ih_l'+str(n)).data
+            nn.init.zeros_(data)
+
+            data = getattr(self.lstm, 'bias_hh_l'+str(n)).data
+            nn.init.zeros_(data)
+
+        self.fc = nn.Linear(hidden_dim, 26)
+        nn.init.orthogonal_(self.fc.weight.data, 2**0.5)
+        nn.init.zeros_(self.fc.bias.data)
 
     def forward(self, x):
-
-        init_h = torch.zeros(5, x.shape[0], self.hidden_dim).cuda()
-        init_c = torch.zeros(5, x.shape[0], self.hidden_dim).cuda()
         
         '''
         for t in range(seq_sz):
@@ -47,7 +60,7 @@ class LstmModel(nn.Module):
             c_t = f_t * c_t + i_t * g_t
             h_t = o_t * torch.tanh(c_t)
         '''
-        out, _ = self.lstm(x, (init_h, init_c))
+        out, _ = self.lstm(x)
 
         logits = self.fc(out[:,-1,:])
 
