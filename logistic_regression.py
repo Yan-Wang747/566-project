@@ -39,8 +39,7 @@ class LogisticRegression(torch.nn.Module):
 # model.cuda()
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam([w], lr=0.01)
-# optimizer = optim.Adam(model.parameters(), lr=0.01)
+optimizer = optim.AdamW([w], weight_decay=0.01)
 
 MAX_ITER = 20000
 for epoch in range(MAX_ITER):  # loop over the dataset multiple times

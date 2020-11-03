@@ -52,7 +52,7 @@ MAX_ITER = 20
 trainLoader = DataLoader(trainingDataset, BATCH_SIZE, True)
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(annModel.parameters(), lr=0.01)
+optimizer = optim.AdamW(annModel.parameters(), weight_decay=0.01)
 
 for epoch in range(MAX_ITER):  # loop over the dataset multiple times
     running_loss = 0.0
