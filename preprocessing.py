@@ -6,8 +6,6 @@ import raw_data_reader
 from augment import augment
 from scipy import interpolate
 
-from shared import SUBJECTS
-
 def __calibrate(dfs):
     subjectsDataset = {}
     for subject, df in dfs.items():
@@ -146,6 +144,11 @@ def __normalize(trainingX, validationX, testX):
 
     return xs[:len(trainingX)], xs[len(trainingX):len(trainingX)+len(validationX)], xs[len(trainingX)+len(validationX):]
 
+def __denoise(xs, n):
+    xs_denoised = np.cumsum(xs, axis=0)
+    xs_denoised[n:] = xs_denoised[n:] - xs_denoised[:-n]
+    return xs_denoised / n
+
 def loadData(subjects=shared.SUBJECTS,
              selectedColumns=['yaw', 'pitch', 'roll'], 
              augmentProp=1, 
@@ -153,7 +156,8 @@ def loadData(subjects=shared.SUBJECTS,
              validationRatio=0.2,
              testRatio=0.2,
              flatten=False,
-             normalize=True):
+             normalize=True,
+             denoise_n=1):
 
     trainingX = None
     trainingLabels = None
@@ -168,6 +172,7 @@ def loadData(subjects=shared.SUBJECTS,
         subjectsDataDict = __calibrate(subjectsDataDict)
         subjectsDataDict = __interpolateDataSet(subjectsDataDict)
         xs, labels = __toDataset(subjectsDataDict)
+        xs = __denoise(xs, denoise_n)
 
         perm = np.random.permutation(range(xs.shape[0]))
         xs = xs[perm]
@@ -195,6 +200,7 @@ def loadData(subjects=shared.SUBJECTS,
         subjectsDataDict = __calibrate(subjectsDataDict)
         subjectsDataDict = __interpolateDataSet(subjectsDataDict)
         trainingX, trainingLabels = __toDataset(subjectsDataDict)
+        trainingX = __denoise(trainingX, denoise_n)
         trainingX, trainingLabels = __augmentTrainingSet(trainingX, trainingLabels, augmentProp)
 
         if len(validationSubjects) > 0:
@@ -203,13 +209,14 @@ def loadData(subjects=shared.SUBJECTS,
             subjectsDataDict = __calibrate(subjectsDataDict)
             subjectsDataDict = __interpolateDataSet(subjectsDataDict)
             validationX, validationLabels = __toDataset(subjectsDataDict)
-        
+            validationX = __denoise(validationX, denoise_n)
         if len(testSubjects) > 0:
             subjectsDataDict = raw_data_reader.loadSubjects(testSubjects)
             subjectsDataDict = __selectColumns(subjectsDataDict, selectedColumns)
             subjectsDataDict = __calibrate(subjectsDataDict)
             subjectsDataDict = __interpolateDataSet(subjectsDataDict)
             testX, testLabels = __toDataset(subjectsDataDict)
+            testX = __denoise(testX, denoise_n)
 
     if flatten:
         trainingX = np.squeeze(np.reshape(trainingX, (trainingX.shape[0], 1, -1)))

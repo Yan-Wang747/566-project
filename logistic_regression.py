@@ -12,9 +12,9 @@ trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = lo
 trainingX = torch.from_numpy(trainingX).cuda()
 # trainingLabels = torch.from_numpy(trainingLabels).long().cuda()
 trainingLabelsOneHot = []
-for i, l in enumerate(trainingLabels):
+for l in trainingLabels:
     trainingLabelsOneHot.append([0]*26)
-    trainingLabelsOneHot[i][l] = 1
+    trainingLabelsOneHot[-1][l] = 1
 
 trainingLabelsOneHot = np.array(trainingLabelsOneHot)
 
