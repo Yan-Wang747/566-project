@@ -12,34 +12,13 @@ class GruModel(nn.Module):
         super().__init__()
         self.hidden_dim = hidden_dim
         self.n_layers = n_layers
-        '''
-        self.W = nn.Parameter(torch.Tensor(3, hidden_sz*4))
-        self.U = nn.Parameter(torch.Tensor(hidden_sz, hidden_sz * 4))
-        self.bias = nn.Parameter(torch.Tensor(hidden_sz * 4))
-        '''
 
-        self.gru = nn.GRU(3, hidden_dim, n_layers, batch_first=True)
+        self.gru = nn.GRU(3, hidden_dim, n_layers, batch_first=True, bidirectional=True)
 
-        self.fc = nn.Linear(hidden_dim, 26)
+        self.fc = nn.Linear(hidden_dim*2, 26)
 
 
     def forward(self, x):
-        
-        '''
-        for t in range(seq_sz):
-            x_t = x[:, t, :]
-
-            gates = x_t @ self.W + h_t @ self.U + self.bias
-            i_t, f_t, g_t, o_t = (
-                torch.sigmoid(gates[:, :self.hidden_dim]), # input
-                torch.sigmoid(gates[:, self.hidden_dim:self.hidden_dim*2]), # forget
-                torch.tanh(gates[:, self.hidden_dim*2:self.hidden_dim*3]),
-                torch.sigmoid(gates[:, self.hidden_dim*3:]), # output
-            )
-
-            c_t = f_t * c_t + i_t * g_t
-            h_t = o_t * torch.tanh(c_t)
-        '''
         out, _ = self.gru(x)
 
         logits = self.fc(out[:,-1,:])
@@ -49,7 +28,7 @@ class GruModel(nn.Module):
 gruModel = GruModel(100, 5)
 gruModel.cuda()
 
-trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData( augmentProp=4, validationRatio=0.1, testRatio=0.1, flatten=False, denoise_n=8)
+trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(['albert'], augmentProp=4, validationRatio=0.1, testRatio=0.1, flatten=False, denoise_n=8)
 
 trainingX = torch.from_numpy(trainingX).cuda()
 trainingLabels = torch.from_numpy(trainingLabels).long().cuda()

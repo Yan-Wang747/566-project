@@ -47,7 +47,7 @@ testX = torch.from_numpy(testX).cuda()
 trainingDataset = torch.utils.data.TensorDataset(trainingX, trainingLabels)
 
 BATCH_SIZE = 500
-MAX_ITER = 20
+MAX_ITER = 200
 
 trainLoader = DataLoader(trainingDataset, BATCH_SIZE, True)
 

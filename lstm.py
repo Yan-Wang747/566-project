@@ -3,7 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 import torch.optim as optim
-import shared
 from preprocessing import loadData
 from sklearn.metrics import classification_report
 
