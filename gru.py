@@ -28,14 +28,14 @@ class GruModel(nn.Module):
 gruModel = GruModel(100, 5)
 gruModel.cuda()
 
-trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(['albert'], augmentProp=4, validationRatio=0.1, testRatio=0.1, flatten=False, denoise_n=8)
+trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(augmentProp=4, validationRatio=0.1, testRatio=0.1, flatten=False, denoise_n=8)
 
-trainingX = torch.from_numpy(trainingX).cuda()
-trainingLabels = torch.from_numpy(trainingLabels).long().cuda()
+trainingX = torch.from_numpy(trainingX)
+trainingLabels = torch.from_numpy(trainingLabels).long()
 
-validationX = torch.from_numpy(validationX).cuda()
+validationX = torch.from_numpy(validationX)
 
-testX = torch.from_numpy(testX).cuda()
+testX = torch.from_numpy(testX)
 
 trainingDataset = torch.utils.data.TensorDataset(trainingX, trainingLabels)
 
@@ -48,6 +48,7 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.AdamW(gruModel.parameters(), weight_decay=0.01)
 
 for epoch in range(MAX_ITER):  # loop over the dataset multiple times
+    print(epoch)
     running_loss = 0.0
     gruModel.train()
 
@@ -57,7 +58,8 @@ for epoch in range(MAX_ITER):  # loop over the dataset multiple times
 
         # zero the parameter gradients
         optimizer.zero_grad()
-
+        inputs = inputs.cuda()
+        labels = labels.cuda()
         # forward + backward + optimize
         logits = gruModel(inputs)
         loss = criterion(logits, labels)
@@ -65,6 +67,7 @@ for epoch in range(MAX_ITER):  # loop over the dataset multiple times
         loss.backward()
         optimizer.step()
     
+    '''
     with torch.no_grad():
         gruModel.eval()
 
@@ -72,6 +75,16 @@ for epoch in range(MAX_ITER):  # loop over the dataset multiple times
         _, valPredicts = torch.max(logits, axis=1)
         valPredicts = valPredicts.cpu().numpy()
         print(classification_report(valPredicts, validationLabels))
+    '''
     
 
 print('Finished Training')
+
+print('Evaluating test set')
+with torch.no_grad():
+        gruModel.eval()
+
+        logits = gruModel(testX)
+        _, valPredicts = torch.max(logits, axis=1)
+        valPredicts = valPredicts.cpu().numpy()
+        print(classification_report(valPredicts, testLabels))
