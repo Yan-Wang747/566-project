@@ -1,10 +1,8 @@
-from sklearn import svm
 import numpy as np
 from preprocessing import loadData
-import shared
 from sklearn.metrics import classification_report
 from sklearn.svm import SVC
-from sklearn.model_selection import cross_val_score, GridSearchCV
+from sklearn.model_selection import GridSearchCV
 
 
 trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(validationRatio=0, testRatio=0.2, flatten=True, normalize=True)
@@ -17,6 +15,9 @@ params_grid = [{'kernel': ['rbf'], 'gamma': [1e-3, 1e-4],
                      'C': [1, 10, 100, 1000]}]
 svm_model = GridSearchCV(SVC(), params_grid, cv=2)
 svm_model.fit(trainx, trainy)
+pred = svm_model.predict(testx)
+print(classification_report(testLabels, pred))
+
 # View the accuracy score
 print('Best score for training data:', svm_model.best_score_,"\n")
 
