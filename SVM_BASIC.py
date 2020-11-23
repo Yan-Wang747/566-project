@@ -8,11 +8,12 @@ from sklearn.model_selection import GridSearchCV
 trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(validationRatio=0, testRatio=0.2, flatten=True, normalize=True)
 trainx = np.array(trainingX[1:4000,])
 trainy = np.array(trainingLabels[1:4000,])
+#trainx = np.array(trainingX)
+#trainy = np.array(trainingLabels)
 testx = np.array(testX)
 testy = np.array(testLabels)
 
-params_grid = [{'kernel': ['rbf'], 'gamma': [1e-3, 1e-4],
-                     'C': [1, 10, 100, 1000]}]
+params_grid = [dict(kernel=['rbf'], gamma=[0.1, 1e-2, 1e-3, 1e-4], C=[1, 10, 100, 1000])]
 svm_model = GridSearchCV(SVC(), params_grid, cv=2)
 svm_model.fit(trainx, trainy)
 pred = svm_model.predict(testx)
