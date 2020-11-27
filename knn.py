@@ -6,6 +6,7 @@ from sklearn.metrics import classification_report
 
 from sklearn.neighbors import KNeighborsClassifier
 
+
 def predict(trainingSamples, trainingLabels, testSamples, k):
     predictedLabels = []
     counter = 0
@@ -26,9 +27,11 @@ def predict(trainingSamples, trainingLabels, testSamples, k):
 trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(validationRatio=0, testRatio=0.2, flatten=True, normalize=True)
 
 y_pred = predict(trainingX, trainingLabels, testX, 2)
-'''
+
+
 classifier = KNeighborsClassifier(n_neighbors = 2)
 classifier.fit(trainingX, trainingLabels)
 y_pred = classifier.predict(testX)
-'''
+
+
 print(classification_report(testLabels, y_pred))

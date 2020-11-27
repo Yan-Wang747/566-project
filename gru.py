@@ -13,7 +13,7 @@ class GruModel(nn.Module):
         self.hidden_dim = hidden_dim
         self.n_layers = n_layers
 
-        self.gru = nn.GRU(3, hidden_dim, n_layers, batch_first=True, bidirectional=True)
+        self.gru = nn.GRU(3, hidden_dim, n_layers, batch_first=True, bidirectional=False)
 
         self.fc = nn.Linear(hidden_dim*2, 26)
 
