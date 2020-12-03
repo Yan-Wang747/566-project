@@ -85,6 +85,6 @@ with torch.no_grad():
         gruModel.eval()
 
         logits = gruModel(testX)
-        _, valPredicts = torch.max(logits, axis=1)
-        valPredicts = valPredicts.cpu().numpy()
-        print(classification_report(valPredicts, testLabels))
+        _, testPredicts = torch.max(logits, axis=1)
+        testPredicts = testPredicts.cpu().numpy()
+        print(classification_report(testPredicts, testLabels))

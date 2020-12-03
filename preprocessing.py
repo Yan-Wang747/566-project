@@ -147,6 +147,7 @@ def __normalize(trainingX, validationX, testX):
 def __denoise(xs, n):
     xs_denoised = np.cumsum(xs, axis=0)
     xs_denoised[n:] = xs_denoised[n:] - xs_denoised[:-n]
+    
     return xs_denoised / n
 
 def loadData(subjects=shared.SUBJECTS,

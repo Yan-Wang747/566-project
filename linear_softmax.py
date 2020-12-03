@@ -3,11 +3,17 @@ from torch import optim
 import torch.nn as nn
 import torch.optim
 import numpy as np
+import matplotlib.pyplot as plt
+import shared
+import random
 
 from preprocessing import loadData
 from sklearn.metrics import classification_report
+from sklearn.metrics import plot_confusion_matrix
 
-trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(validationRatio=0.2, testRatio=0.2, flatten=True, normalize=True)
+subject = random.choice(shared.SUBJECTS)
+# trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(validationRatio=0.2, testRatio=0.2, flatten=True, normalize=True, denoise_n=10)
+trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(subjects=[subject], validationRatio=0.2, testRatio=0.2, flatten=True, normalize=True, denoise_n=10)
 
 trainingX = torch.from_numpy(trainingX).cuda()
 # trainingLabels = torch.from_numpy(trainingLabels).long().cuda()
@@ -41,7 +47,13 @@ class LogisticRegression(torch.nn.Module):
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.AdamW([w], weight_decay=0.01)
 
-MAX_ITER = 20000
+MAX_ITER = 5500
+losses = []
+accs = []
+best_val_acc = -1
+best_w = None
+best_epoch = None
+
 for epoch in range(MAX_ITER):  # loop over the dataset multiple times
     # zero the parameter gradients
     optimizer.zero_grad()
@@ -56,16 +68,41 @@ for epoch in range(MAX_ITER):  # loop over the dataset multiple times
         gv = p - trainingLabelsOneHot
         loss = -torch.sum(torch.log(torch.sum(trainingLabelsOneHot*p, axis=1))) / len(trainingX)
 
-    print(loss.item())
+    losses.append(loss.item())
 
     # loss.backward()
     logits.backward(gv)
     optimizer.step()
 
+    with torch.no_grad():
+        logits = validationX @ w
+
+        _, predicts = torch.max(logits, axis=1)
+        predicts = predicts.cpu().numpy()
+        acc = np.mean(predicts == validationLabels)
+        accs.append(acc)
+        if acc > best_val_acc:
+            best_val_acc = acc
+            best_w = w
+            best_epoch = epoch
+
+
+print(best_epoch)
+print(best_val_acc)
 with torch.no_grad():
-    logits = validationX @ w
-    # logits = model(validationX)
-    _, valPredicts = torch.max(logits, axis=1)
-    valPredicts = valPredicts.cpu().numpy()
-    print(classification_report(valPredicts, validationLabels))
-    
+    logits = testX @ best_w
+
+    _, predicts = torch.max(logits, axis=1)
+    predicts = predicts.cpu().numpy()
+    print(classification_report(predicts, testLabels))
+
+plt.figure()
+plt.plot(losses)
+plt.xlabel('epoch')
+plt.ylabel('loss')
+
+plt.figure()
+plt.plot(accs)
+plt.xlabel('epoch')
+plt.ylabel('accuracy')
+plt.show()
