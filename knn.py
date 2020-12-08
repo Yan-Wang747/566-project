@@ -11,7 +11,6 @@ from sklearn.metrics import classification_report
 
 from sklearn.neighbors import KNeighborsClassifier
 
-
 def predict(trainingSamples, trainingLabels, testSamples, k):
     predictedLabels = []
     counter = 0
@@ -28,21 +27,29 @@ def predict(trainingSamples, trainingLabels, testSamples, k):
 
     return predictedLabels
 
+runs = 10
+ks = [1, 2, 3, 4, 5]
 
-subject = random.choice(shared.SUBJECTS)
-# trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(splitMode=shared.SPLIT_MODE_BY_SUBJECT, validationRatio=0, testRatio=0.4, flatten=True, normalize=True, denoise_n=10)
-trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(validationRatio=0, testRatio=0.4, flatten=True, normalize=True, denoise_n=10)
-# trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(subjects=[subject], validationRatio=0, testRatio=0.4, flatten=True, normalize=True, denoise_n=10)
+# trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(validationRatio=0, testRatio=0.4, flatten=True)
+for k in ks:
+    for r in range(runs):
+        print("k = {}, r = {}:".format(k, r))
+        subject = random.choice(shared.SUBJECTS)
+        
+        trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(subjects=[subject], validationRatio=0, testRatio=0.4, flatten=True)
 
-# y_pred = predict(trainingX, trainingLabels, testX, 2)
+        classifier = KNeighborsClassifier(n_neighbors = k)
+        classifier.fit(trainingX, trainingLabels)
+        y_pred = classifier.predict(testX)
+        
+        report = open("knn_report_ind.txt", "a")
+        # report = open("knn_report_rand.txt", "a")
+        report.write("k = {}, r = {}:\n".format(k, r))
+        report.write(classification_report(y_pred, testLabels))
+        report.write('\n')
+        report.close()
 
-k = 1
-classifier = KNeighborsClassifier(n_neighbors = k)
-classifier.fit(trainingX, trainingLabels)
-y_pred = classifier.predict(testX)
+# plot_confusion_matrix(classifier, testX, testLabels)
 
-print(classification_report(y_pred, testLabels))
-plot_confusion_matrix(classifier, testX, testLabels)
-
-plt.show()
+# plt.show()
 

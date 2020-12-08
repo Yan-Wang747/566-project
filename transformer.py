@@ -7,6 +7,12 @@ import math
 from preprocessing import loadData
 from sklearn.metrics import classification_report
 
+import random
+import shared
+import numpy as np
+
+import matplotlib.pyplot as plt
+
 class TransformerModel(nn.Module):
 
     def __init__(self, nhead, nhid, nlayers, dropout=0.1):
@@ -40,9 +46,9 @@ class TransformerModel(nn.Module):
         self.out.weight.data.uniform_(-initrange, initrange)
 
 
-    def forward(self, src, src_mask):
+    def forward(self, src):
         src = self.pos_encoder(src)
-        output = self.transformer_encoder(src, src_mask)
+        output = self.transformer_encoder(src)
 
         output = output.transpose(0, 1)
         output = torch.reshape(output, [output.shape[0], 1, -1])
@@ -72,55 +78,126 @@ class PositionalEncoding(nn.Module):
         x = x + self.pe[:x.size(0), :]
         return self.dropout(x)
 
-model = TransformerModel(1, 128, 8)
-model.cuda()
+mode = shared.SPLIT_MODE_BY_SUBJECT
 
-trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(augmentProp=4, validationRatio=0.1, testRatio=0.1, flatten=False, denoise_n=8)
+if mode == shared.SPLIT_MODE_CLASSIC:
+    trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData()
+    trainingX = torch.from_numpy(trainingX).cuda()
+    trainingLabels = torch.from_numpy(trainingLabels).long().cuda()
 
-trainingX = torch.from_numpy(trainingX).cuda()
-trainingLabels = torch.from_numpy(trainingLabels).long().cuda()
+    validationX = torch.from_numpy(validationX).cuda()
+    validationX = validationX.transpose(0, 1)
 
-validationX = torch.from_numpy(validationX).cuda()
-validationX = validationX.transpose(0, 1)
-testX = torch.from_numpy(testX).cuda()
+    testX = torch.from_numpy(testX).cuda()
+    testX = testX.transpose(0, 1)
 
-trainingDataset = torch.utils.data.TensorDataset(trainingX, trainingLabels)
+    trainingDataset = torch.utils.data.TensorDataset(trainingX, trainingLabels)
 
+    reportName = "trans_report_rand.txt"
+    
+elif mode == shared.SPLIT_MODE_BY_SUBJECT:
+    reportName = "trans_report_ind.txt"
+
+report = open(reportName, "w")
+report.close()
+
+runs = 10
 BATCH_SIZE = 250
-MAX_ITER = 250
-
-trainLoader = DataLoader(trainingDataset, BATCH_SIZE, True)
-
+MAX_ITER = 500
 criterion = nn.CrossEntropyLoss()
+for r in range(runs):
+    print("r = " + str(r))
 
-optimizer = optim.AdamW(model.parameters(), weight_decay=0.1)
+    if mode == shared.SPLIT_MODE_BY_SUBJECT:
+        subject = random.choice(shared.SUBJECTS)
+        trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(subjects=[subject])
 
-src_mask = model.generate_square_subsequent_mask(100).cuda()
-for epoch in range(MAX_ITER):  # loop over the dataset multiple times
-    running_loss = 0.0
-    model.train()
+        trainingX = torch.from_numpy(trainingX).cuda()
+        trainingLabels = torch.from_numpy(trainingLabels).long().cuda()
 
-    for i, data in enumerate(trainLoader):
-        # get the inputs; data is a list of [inputs, labels]
-        inputs, labels = data
+        validationX = torch.from_numpy(validationX).cuda()
+        validationX = validationX.transpose(0, 1)
+        testX = torch.from_numpy(testX).cuda()
+        testX = testX.transpose(0, 1)
 
-        # zero the parameter gradients
-        optimizer.zero_grad()
-        # forward + backward + optimize
-        inputs = inputs.transpose(0, 1)
-        logits = model(inputs, src_mask)
-        loss = criterion(logits, labels)
-        running_loss += loss.item()
-        loss.backward()
-        optimizer.step()
-    
-    with torch.no_grad():
-        model.eval()
+        trainingDataset = torch.utils.data.TensorDataset(trainingX, trainingLabels)
+
+    trainLoader = DataLoader(trainingDataset, BATCH_SIZE, True)
+
+    model = TransformerModel(3, 128, 8)
+    model.cuda()
+    optimizer = optim.AdamW(model.parameters(), weight_decay=0.2)
+
+    # src_mask = model.generate_square_subsequent_mask(100).cuda()
+
+    losses = []
+    accs = []
+    best_val_acc = -1
+    best_epoch = None
+
+    for epoch in range(MAX_ITER):  # loop over the dataset multiple times
+        running_loss = 0.0
+        model.train()
+        print("epoch: " + str(epoch))
+        for i, data in enumerate(trainLoader):
+            # get the inputs; data is a list of [inputs, labels]
+            inputs, labels = data
+            inputs = inputs.transpose(0, 1)
+
+            # zero the parameter gradients
+            optimizer.zero_grad()
+            # forward + backward + optimize
+            logits = model(inputs)
+            loss = criterion(logits, labels)
+            running_loss += loss.item()
+            loss.backward()
+            optimizer.step()
+
+        losses.append(running_loss)
+
+        with torch.no_grad():
+            model.eval()
+
+            logits = model(validationX)
+            _, predicts = torch.max(logits, axis=1)
+            predicts = predicts.cpu().numpy()
+            acc = np.mean(predicts == validationLabels)
+            accs.append(acc)
+            if acc > best_val_acc:
+                best_val_acc = acc
+                torch.save(model.state_dict(), './best_transformer_model.pth')
+                best_epoch = epoch
         
-        logits = model(validationX, src_mask)
-        _, valPredicts = torch.max(logits, axis=1)
-        valPredicts = valPredicts.cpu().numpy()
-        print(classification_report(valPredicts, validationLabels))
-    
+    print(best_epoch)
+    print(best_val_acc)
+
+    bestModel = TransformerModel(3, 128, 8)
+    bestModel.load_state_dict(torch.load('best_transformer_model.pth'))
+    bestModel.to('cuda')
+    bestModel.eval()
+
+    with torch.no_grad():
+        logits = bestModel(testX)
+        _, predicts = torch.max(logits, axis=1)
+        predicts = predicts.cpu().numpy()
+
+        report = open(reportName, "a")
+        report.write("r = {}:\n".format(r))
+        report.write(classification_report(predicts, testLabels))
+        report.write('\n')
+        report.close()
 
 print('Finished Training')
+
+'''
+plt.figure()
+plt.plot(losses)
+plt.xlabel('epoch')
+plt.ylabel('loss')
+
+plt.figure()
+plt.plot(accs)
+plt.xlabel('epoch')
+plt.ylabel('accuracy')
+plt.show()
+'''

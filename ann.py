@@ -4,8 +4,12 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 import torch.optim as optim
 import shared
+import random
+import numpy as np
 from preprocessing import loadData
 from sklearn.metrics import classification_report
+
+import matplotlib.pyplot as plt
 
 class AnnModel(nn.Module):
     def __init__(self):
@@ -16,13 +20,6 @@ class AnnModel(nn.Module):
 
         self.out = nn.Linear(64, 26)
 
-        '''
-        nn.init.orthogonal_(self.fc1.weight.data,gain=2**0.5)
-        nn.init.constant_(self.fc1.bias.data,0.0)
-        nn.init.orthogonal_(self.out.weight.data,gain=2**0.5)
-        nn.init.constant_(self.out.bias.data,0.0)
-        '''
-
     def forward(self, x):
         
         x = F.relu(self.fc1(x))
@@ -32,54 +29,119 @@ class AnnModel(nn.Module):
 
         return logits
 
-annModel = AnnModel()
-annModel.cuda()
+mode = shared.SPLIT_MODE_BY_SUBJECT
 
-trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(augmentProp=4, validationRatio=0.2, testRatio=0.2, flatten=True)
+if mode == shared.SPLIT_MODE_CLASSIC:
+    trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(flatten=True)
 
-trainingX = torch.from_numpy(trainingX).cuda()
-trainingLabels = torch.from_numpy(trainingLabels).long().cuda()
+    trainingX = torch.from_numpy(trainingX).cuda()
+    trainingLabels = torch.from_numpy(trainingLabels).long().cuda()
 
-validationX = torch.from_numpy(validationX).cuda()
+    validationX = torch.from_numpy(validationX).cuda()
 
-testX = torch.from_numpy(testX).cuda()
+    testX = torch.from_numpy(testX).cuda()
 
-trainingDataset = torch.utils.data.TensorDataset(trainingX, trainingLabels)
+    trainingDataset = torch.utils.data.TensorDataset(trainingX, trainingLabels)
 
+    reportName = "ann_report_rand.txt"
+
+elif mode == shared.SPLIT_MODE_BY_SUBJECT:
+    reportName = "ann_report_ind.txt"
+
+report = open(reportName, "w")
+report.close()
+
+runs = 10
 BATCH_SIZE = 500
-MAX_ITER = 200
-
-trainLoader = DataLoader(trainingDataset, BATCH_SIZE, True)
-
+MAX_ITER = 400
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.AdamW(annModel.parameters(), weight_decay=0.01)
+for r in range(runs):
+    print("r = " + str(r))
 
-for epoch in range(MAX_ITER):  # loop over the dataset multiple times
-    running_loss = 0.0
-    annModel.train()
+    if mode == shared.SPLIT_MODE_BY_SUBJECT:
+        subject = random.choice(shared.SUBJECTS)
+        trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(subjects=[subject], flatten=True)
 
-    for i, data in enumerate(trainLoader):
-        # get the inputs; data is a list of [inputs, labels]
-        inputs, labels = data
+        trainingX = torch.from_numpy(trainingX).cuda()
+        trainingLabels = torch.from_numpy(trainingLabels).long().cuda()
 
-        # zero the parameter gradients
-        optimizer.zero_grad()
+        validationX = torch.from_numpy(validationX).cuda()
 
-        # forward + backward + optimize
-        logits = annModel(inputs)
-        loss = criterion(logits, labels)
-        running_loss += loss.item()
+        testX = torch.from_numpy(testX).cuda()
 
-        loss.backward()
-        optimizer.step()
+        trainingDataset = torch.utils.data.TensorDataset(trainingX, trainingLabels)
+
+    trainLoader = DataLoader(trainingDataset, BATCH_SIZE, True)
     
+    annModel = AnnModel()
+    annModel.cuda()
+    optimizer = optim.AdamW(annModel.parameters(), weight_decay=0.01)
+
+    losses = []
+    accs = []
+    best_val_acc = -1
+    best_epoch = None
+    for epoch in range(MAX_ITER):  # loop over the dataset multiple times
+        running_loss = 0.0
+        annModel.train()
+
+        for i, data in enumerate(trainLoader):
+            # get the inputs; data is a list of [inputs, labels]
+            inputs, labels = data
+
+            # zero the parameter gradients
+            optimizer.zero_grad()
+
+            # forward + backward + optimize
+            logits = annModel(inputs)
+            loss = criterion(logits, labels)
+            running_loss += loss.item()
+
+            loss.backward()
+            optimizer.step()
+        
+        losses.append(running_loss)
+
+        with torch.no_grad():
+            annModel.eval()
+
+            logits = annModel(validationX)
+            _, predicts = torch.max(logits, axis=1)
+            predicts = predicts.cpu().numpy()
+            acc = np.mean(predicts == validationLabels)
+            accs.append(acc)
+            if acc > best_val_acc:
+                best_val_acc = acc
+                torch.save(annModel.state_dict(), './best_ann_model.pth')
+                best_epoch = epoch
+        
+    bestModel = AnnModel()
+    bestModel.load_state_dict(torch.load('best_ann_model.pth'))
+    bestModel.to('cuda')
+    bestModel.eval()
+
     with torch.no_grad():
-        annModel.eval()
-
-        logits = annModel(validationX)
-        _, valPredicts = torch.max(logits, axis=1)
-        valPredicts = valPredicts.cpu().numpy()
-        print(classification_report(valPredicts, validationLabels))
-    
+        logits = bestModel(testX)
+        _, predicts = torch.max(logits, axis=1)
+        predicts = predicts.cpu().numpy()
+        
+        report = open(reportName, "a")
+        report.write("r = {}:\n".format(r))
+        report.write(classification_report(predicts, testLabels))
+        report.write('\n')
+        report.close()
 
 print('Finished Training')
+
+'''
+plt.figure()
+plt.plot(losses)
+plt.xlabel('epoch')
+plt.ylabel('loss')
+
+plt.figure()
+plt.plot(accs)
+plt.xlabel('epoch')
+plt.ylabel('accuracy')
+plt.show()
+'''

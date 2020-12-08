@@ -151,14 +151,13 @@ def __denoise(xs, n):
     return xs_denoised / n
 
 def loadData(subjects=shared.SUBJECTS,
-             selectedColumns=['yaw', 'pitch', 'roll'], 
-             augmentProp=1, 
+             selectedColumns=['yaw', 'pitch', 'roll'],  
              splitMode=shared.SPLIT_MODE_CLASSIC,
              validationRatio=0.2,
              testRatio=0.2,
              flatten=False,
              normalize=True,
-             denoise_n=1):
+             denoise_n=10):
 
     trainingX = None
     trainingLabels = None
@@ -186,7 +185,7 @@ def loadData(subjects=shared.SUBJECTS,
         trainingX = xs[:numOfTrain]
         trainingLabels = labels[:numOfTrain]
 
-        trainingX, trainingLabels = __augmentTrainingSet(trainingX, trainingLabels, augmentProp)
+        # trainingX, trainingLabels = __augmentTrainingSet(trainingX, trainingLabels, augmentProp)
 
         validationX = xs[numOfTrain:numOfTrain+numOfVal]
         validationLabels = labels[numOfTrain:numOfTrain+numOfVal]
@@ -202,7 +201,7 @@ def loadData(subjects=shared.SUBJECTS,
         subjectsDataDict = __interpolateDataSet(subjectsDataDict)
         trainingX, trainingLabels = __toDataset(subjectsDataDict)
         trainingX = __denoise(trainingX, denoise_n)
-        trainingX, trainingLabels = __augmentTrainingSet(trainingX, trainingLabels, augmentProp)
+        # trainingX, trainingLabels = __augmentTrainingSet(trainingX, trainingLabels, augmentProp)
 
         if len(validationSubjects) > 0:
             subjectsDataDict = raw_data_reader.loadSubjects(validationSubjects)

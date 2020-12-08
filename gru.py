@@ -6,6 +6,9 @@ import torch.optim as optim
 import shared
 from preprocessing import loadData
 from sklearn.metrics import classification_report
+import random
+import numpy as np
+import matplotlib.pyplot as plt
 
 class GruModel(nn.Module):
     def __init__(self, hidden_dim, n_layers):
@@ -13,9 +16,8 @@ class GruModel(nn.Module):
         self.hidden_dim = hidden_dim
         self.n_layers = n_layers
 
-        self.gru = nn.GRU(3, hidden_dim, n_layers, batch_first=True, bidirectional=False)
-
-        self.fc = nn.Linear(hidden_dim*2, 26)
+        self.gru = nn.GRU(3, hidden_dim, n_layers, batch_first=True)
+        self.fc = nn.Linear(hidden_dim, 26)
 
 
     def forward(self, x):
@@ -25,66 +27,121 @@ class GruModel(nn.Module):
 
         return logits
 
-gruModel = GruModel(100, 5)
-gruModel.cuda()
+mode = shared.SPLIT_MODE_BY_SUBJECT
 
-trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(augmentProp=4, validationRatio=0.1, testRatio=0.1, flatten=False, denoise_n=8)
+if mode == shared.SPLIT_MODE_CLASSIC:
+    trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData()
 
-trainingX = torch.from_numpy(trainingX)
-trainingLabels = torch.from_numpy(trainingLabels).long()
+    trainingX = torch.from_numpy(trainingX).cuda()
+    trainingLabels = torch.from_numpy(trainingLabels).long().cuda()
 
-validationX = torch.from_numpy(validationX)
+    validationX = torch.from_numpy(validationX).cuda()
 
-testX = torch.from_numpy(testX)
+    testX = torch.from_numpy(testX).cuda()
 
-trainingDataset = torch.utils.data.TensorDataset(trainingX, trainingLabels)
+    trainingDataset = torch.utils.data.TensorDataset(trainingX, trainingLabels)
 
+    reportName = "gru_report_rand.txt"
+
+elif mode == shared.SPLIT_MODE_BY_SUBJECT:
+    reportName = "gru_report_ind.txt"
+
+report = open(reportName, "w")
+report.close()
+
+runs = 10
 BATCH_SIZE = 250
-MAX_ITER = 250
-
-trainLoader = DataLoader(trainingDataset, BATCH_SIZE, True)
-
+MAX_ITER = 400
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.AdamW(gruModel.parameters(), weight_decay=0.01)
+for r in range(runs):
+    print("r = " + str(r))
 
-for epoch in range(MAX_ITER):  # loop over the dataset multiple times
-    print(epoch)
-    running_loss = 0.0
-    gruModel.train()
+    if mode == shared.SPLIT_MODE_BY_SUBJECT:
+        subject = random.choice(shared.SUBJECTS)
+        trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(subjects=[subject])
+        
+        trainingX = torch.from_numpy(trainingX).cuda()
+        
+        trainingLabels = torch.from_numpy(trainingLabels).long().cuda()
 
-    for i, data in enumerate(trainLoader):
-        # get the inputs; data is a list of [inputs, labels]
-        inputs, labels = data
+        validationX = torch.from_numpy(validationX).cuda()
 
-        # zero the parameter gradients
-        optimizer.zero_grad()
-        inputs = inputs.cuda()
-        labels = labels.cuda()
-        # forward + backward + optimize
-        logits = gruModel(inputs)
-        loss = criterion(logits, labels)
-        running_loss += loss.item()
-        loss.backward()
-        optimizer.step()
-    
-    '''
+        testX = torch.from_numpy(testX).cuda()
+
+        trainingDataset = torch.utils.data.TensorDataset(trainingX, trainingLabels)
+
+    trainLoader = DataLoader(trainingDataset, BATCH_SIZE, True)
+    gruModel = GruModel(100, 5)
+    gruModel.cuda()
+    optimizer = optim.AdamW(gruModel.parameters(), weight_decay=0.005)
+
+    losses = []
+    accs = []
+    best_val_acc = -1
+    best_epoch = None
+    for epoch in range(MAX_ITER):  # loop over the dataset multiple times
+        print("epoch: " + str(epoch))
+        running_loss = 0.0
+        gruModel.train()
+
+        for i, data in enumerate(trainLoader):
+            # get the inputs; data is a list of [inputs, labels]
+            inputs, labels = data
+
+            # zero the parameter gradients
+            optimizer.zero_grad()
+            
+            # forward + backward + optimize
+            logits = gruModel(inputs)
+            loss = criterion(logits, labels)
+            running_loss += loss.item()
+            loss.backward()
+            optimizer.step()
+
+        losses.append(running_loss)
+        with torch.no_grad():
+            gruModel.eval()
+
+            logits = gruModel(validationX)
+            _, predicts = torch.max(logits, axis=1)
+            predicts = predicts.cpu().numpy()
+            acc = np.mean(predicts == validationLabels)
+            accs.append(acc)
+            if acc > best_val_acc:
+                best_val_acc = acc
+                torch.save(gruModel.state_dict(), './best_gru_model.pth')
+                best_epoch = epoch
+
+    print(best_epoch)
+    print(best_val_acc)
+
+    bestModel = GruModel(100, 5)
+    bestModel.load_state_dict(torch.load('best_gru_model.pth'))
+    bestModel.to('cuda')
+    bestModel.eval()
+
     with torch.no_grad():
-        gruModel.eval()
-
-        logits = gruModel(validationX)
-        _, valPredicts = torch.max(logits, axis=1)
-        valPredicts = valPredicts.cpu().numpy()
-        print(classification_report(valPredicts, validationLabels))
-    '''
-    
+        logits = bestModel(testX)
+        _, predicts = torch.max(logits, axis=1)
+        predicts = predicts.cpu().numpy()
+        
+        report = open(reportName, "a")
+        report.write("r = {}:\n".format(r))
+        report.write(classification_report(predicts, testLabels))
+        report.write('\n')
+        report.close()
 
 print('Finished Training')
 
-print('Evaluating test set')
-with torch.no_grad():
-        gruModel.eval()
+'''
+plt.figure()
+plt.plot(losses)
+plt.xlabel('epoch')
+plt.ylabel('loss')
 
-        logits = gruModel(testX)
-        _, testPredicts = torch.max(logits, axis=1)
-        testPredicts = testPredicts.cpu().numpy()
-        print(classification_report(testPredicts, testLabels))
+plt.figure()
+plt.plot(accs)
+plt.xlabel('epoch')
+plt.ylabel('accuracy')
+plt.show()
+'''
