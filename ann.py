@@ -29,10 +29,10 @@ class AnnModel(nn.Module):
 
         return logits
 
-mode = shared.SPLIT_MODE_BY_SUBJECT
+mode = shared.SPLIT_MODE_CLASSIC
 
 if mode == shared.SPLIT_MODE_CLASSIC:
-    trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(flatten=True)
+    trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(flatten=True, denoise_n=1)
 
     trainingX = torch.from_numpy(trainingX).cuda()
     trainingLabels = torch.from_numpy(trainingLabels).long().cuda()
@@ -43,7 +43,7 @@ if mode == shared.SPLIT_MODE_CLASSIC:
 
     trainingDataset = torch.utils.data.TensorDataset(trainingX, trainingLabels)
 
-    reportName = "ann_report_rand.txt"
+    reportName = "ann_report_rand_no_denoise.txt"
 
 elif mode == shared.SPLIT_MODE_BY_SUBJECT:
     reportName = "ann_report_ind.txt"
@@ -51,7 +51,7 @@ elif mode == shared.SPLIT_MODE_BY_SUBJECT:
 report = open(reportName, "w")
 report.close()
 
-runs = 10
+runs = 1
 BATCH_SIZE = 500
 MAX_ITER = 400
 criterion = nn.CrossEntropyLoss()

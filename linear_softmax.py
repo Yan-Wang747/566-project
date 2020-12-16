@@ -9,7 +9,6 @@ import random
 
 from preprocessing import loadData
 from sklearn.metrics import classification_report
-from sklearn.metrics import plot_confusion_matrix
 
 class LogisticRegression(torch.nn.Module):
     def __init__(self):
@@ -20,10 +19,10 @@ class LogisticRegression(torch.nn.Module):
         outputs = self.linear(x)
         return outputs
 
-mode = shared.SPLIT_MODE_BY_SUBJECT
+mode = shared.SPLIT_MODE_CLASSIC
 
 if mode == shared.SPLIT_MODE_CLASSIC:
-    trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(flatten=True)
+    trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(flatten=True, normalize=False)
     trainingX = torch.from_numpy(trainingX).cuda()
     # trainingLabels = torch.from_numpy(trainingLabels).long().cuda()
     trainingLabelsOneHot = []
@@ -39,7 +38,7 @@ if mode == shared.SPLIT_MODE_CLASSIC:
 
     testX = torch.from_numpy(testX).cuda()
 
-    reportName = "linear_report_rand.txt"
+    reportName = "linear_report_rand_no_norm.txt"
 
 elif mode == shared.SPLIT_MODE_BY_SUBJECT:
     reportName = "linear_report_ind.txt"
@@ -47,7 +46,7 @@ elif mode == shared.SPLIT_MODE_BY_SUBJECT:
 report = open(reportName, "w")
 report.close()
 
-runs = 10
+runs = 1
 criterion = nn.CrossEntropyLoss()
 MAX_ITER = 30000
 for r in range(runs):

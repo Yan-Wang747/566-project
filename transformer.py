@@ -27,12 +27,6 @@ class TransformerModel(nn.Module):
         self.out = nn.Linear(64, 26)
 
         self.init_weights()
-    
-    def generate_square_subsequent_mask(self, sz):
-        mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
-        mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
-
-        return mask
 
     def init_weights(self):
         initrange = 0.1
@@ -46,7 +40,7 @@ class TransformerModel(nn.Module):
         self.out.weight.data.uniform_(-initrange, initrange)
 
 
-    def forward(self, src):
+    def forward(self, src, src_mask):
         src = self.pos_encoder(src)
         output = self.transformer_encoder(src)
 
@@ -78,10 +72,16 @@ class PositionalEncoding(nn.Module):
         x = x + self.pe[:x.size(0), :]
         return self.dropout(x)
 
-mode = shared.SPLIT_MODE_BY_SUBJECT
+def generate_square_subsequent_mask(sz):
+    mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
+    mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
+    
+    return mask
+
+mode = shared.SPLIT_MODE_CLASSIC
 
 if mode == shared.SPLIT_MODE_CLASSIC:
-    trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData()
+    trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(normalize=False)
     trainingX = torch.from_numpy(trainingX).cuda()
     trainingLabels = torch.from_numpy(trainingLabels).long().cuda()
 
@@ -93,7 +93,7 @@ if mode == shared.SPLIT_MODE_CLASSIC:
 
     trainingDataset = torch.utils.data.TensorDataset(trainingX, trainingLabels)
 
-    reportName = "trans_report_rand.txt"
+    reportName = "trans_report_rand_no_norm.txt"
     
 elif mode == shared.SPLIT_MODE_BY_SUBJECT:
     reportName = "trans_report_ind.txt"
@@ -101,10 +101,11 @@ elif mode == shared.SPLIT_MODE_BY_SUBJECT:
 report = open(reportName, "w")
 report.close()
 
-runs = 10
+runs = 1
 BATCH_SIZE = 250
 MAX_ITER = 500
 criterion = nn.CrossEntropyLoss()
+src_mask = generate_square_subsequent_mask(100).cuda()
 for r in range(runs):
     print("r = " + str(r))
 
@@ -128,8 +129,6 @@ for r in range(runs):
     model.cuda()
     optimizer = optim.AdamW(model.parameters(), weight_decay=0.2)
 
-    # src_mask = model.generate_square_subsequent_mask(100).cuda()
-
     losses = []
     accs = []
     best_val_acc = -1
@@ -147,7 +146,7 @@ for r in range(runs):
             # zero the parameter gradients
             optimizer.zero_grad()
             # forward + backward + optimize
-            logits = model(inputs)
+            logits = model(inputs, src_mask)
             loss = criterion(logits, labels)
             running_loss += loss.item()
             loss.backward()
@@ -158,7 +157,7 @@ for r in range(runs):
         with torch.no_grad():
             model.eval()
 
-            logits = model(validationX)
+            logits = model(validationX, src_mask)
             _, predicts = torch.max(logits, axis=1)
             predicts = predicts.cpu().numpy()
             acc = np.mean(predicts == validationLabels)
@@ -177,7 +176,7 @@ for r in range(runs):
     bestModel.eval()
 
     with torch.no_grad():
-        logits = bestModel(testX)
+        logits = bestModel(testX, src_mask)
         _, predicts = torch.max(logits, axis=1)
         predicts = predicts.cpu().numpy()
 

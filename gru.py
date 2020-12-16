@@ -27,10 +27,10 @@ class GruModel(nn.Module):
 
         return logits
 
-mode = shared.SPLIT_MODE_BY_SUBJECT
+mode = shared.SPLIT_MODE_CLASSIC
 
 if mode == shared.SPLIT_MODE_CLASSIC:
-    trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData()
+    trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(normalize=False)
 
     trainingX = torch.from_numpy(trainingX).cuda()
     trainingLabels = torch.from_numpy(trainingLabels).long().cuda()
@@ -41,7 +41,7 @@ if mode == shared.SPLIT_MODE_CLASSIC:
 
     trainingDataset = torch.utils.data.TensorDataset(trainingX, trainingLabels)
 
-    reportName = "gru_report_rand.txt"
+    reportName = "gru_report_rand_no_norm.txt"
 
 elif mode == shared.SPLIT_MODE_BY_SUBJECT:
     reportName = "gru_report_ind.txt"
@@ -49,7 +49,7 @@ elif mode == shared.SPLIT_MODE_BY_SUBJECT:
 report = open(reportName, "w")
 report.close()
 
-runs = 10
+runs = 1
 BATCH_SIZE = 250
 MAX_ITER = 400
 criterion = nn.CrossEntropyLoss()

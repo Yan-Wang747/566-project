@@ -157,7 +157,7 @@ def loadData(subjects=shared.SUBJECTS,
              testRatio=0.2,
              flatten=False,
              normalize=True,
-             denoise_n=10):
+             denoise_n=8):
 
     trainingX = None
     trainingLabels = None
