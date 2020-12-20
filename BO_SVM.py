@@ -4,8 +4,9 @@ from sklearn.metrics import classification_report
 from sklearn.svm import SVC
 from sklearn.model_selection import RepeatedStratifiedKFold
 from skopt import BayesSearchCV
-trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(validationRatio=0, testRatio=0.2,
-                                                                                       flatten=True, normalize=True)
+
+
+trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(validationRatio=0.2, testRatio=0.2, flatten=True, normalize=True, denoise_n=10)
 trainx = np.array(trainingX[1:4000, ])
 trainy = np.array(trainingLabels[1:4000, ])
 #trainx = np.array(trainingX)

@@ -3,9 +3,12 @@ from preprocessing import loadData
 from sklearn.metrics import classification_report
 from sklearn.svm import SVC
 from sklearn.model_selection import GridSearchCV
+import random
+import shared
 
-trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(validationRatio=0, testRatio=0.2,
-                                                                                       flatten=True, normalize=True)
+#subject = random.choice(shared.SUBJECTS)
+trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(validationRatio=0.2, testRatio=0.2, flatten=True, normalize=True, denoise_n=1)
+#trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(subjects=[subject], validationRatio=0.2, testRatio=0.2, flatten=True, normalize=True, denoise_n=10)
 trainx = np.array(trainingX[1:4000, ])
 trainy = np.array(trainingLabels[1:4000, ])
 # trainx = np.array(trainingX)
@@ -26,7 +29,7 @@ print('Best C:', svm_model.best_estimator_.C, "\n")
 print('Best Kernel:', svm_model.best_estimator_.kernel, "\n")
 print('Best Gamma:', svm_model.best_estimator_.gamma, "\n")
 
-svm_model_new = SVC(gamma=0.01, C=100, kernel='rbf', decision_function_shape="ovr")
+svm_model_new = SVC(gamma=0.001, C=1000, kernel='rbf', decision_function_shape="ovr")
 svm_model_new.fit(trainx, trainy)
 pred = svm_model.predict(testx)
 print(classification_report(testy, pred))
