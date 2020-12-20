@@ -2,11 +2,12 @@ from sklearn import svm
 import numpy as np
 from preprocessing import loadData
 from sklearn.metrics import classification_report
+import random
+import shared
 
-
-
-#trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(splitMode=shared.SPLIT_MODE_BY_SUBJECT, validationRatio=0, testRatio=0.2, flatten=True)
-trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(validationRatio=0, testRatio=0.2, flatten=True, normalize=True)
+#subject = random.choice(shared.SUBJECTS)
+trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(validationRatio=0.2, testRatio=0.2, flatten=True, normalize=True, denoise_n=10)
+#trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(subjects=[subject], validationRatio=0.2, testRatio=0.2, flatten=True, normalize=True, denoise_n=10)
 trainx = np.array(trainingX)
 trainy = np.array(trainingLabels)
 testx = np.array(testX)
