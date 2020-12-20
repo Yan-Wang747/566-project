@@ -38,13 +38,13 @@ class CnnModel(nn.Module):
         self.pool3 = nn.MaxPool1d(kernel_size=5, stride=5)
         # 64 channel, num_feature/20
 
-        self.fc1 = nn.Linear(shared.NUM_OF_INTERP_POINTS * 64 // 20, 320)
+        self.fc1 = nn.Linear(shared.NUM_OF_INTERP_POINTS * 64 // 20, 160)
         #self.drop1 = nn.Dropout(p=0.2)
-        self.fc2 = nn.Linear(320, 160)
+        # self.fc2 = nn.Linear(320, 160)
         #self.drop2 = nn.Dropout(p=0.2)
-        self.fc3 = nn.Linear(160, 80)
+        self.fc2 = nn.Linear(160, 80)
         #self.drop3 = nn.Dropout(p=0.2)
-        self.fc4 = nn.Linear(80, 40)
+        self.fc3 = nn.Linear(80, 40)
         #self.drop4 = nn.Dropout(p=0.2)
         self.out = nn.Linear(40, 26)
 
@@ -56,14 +56,14 @@ class CnnModel(nn.Module):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = F.relu(self.fc3(x))
-        x = F.relu(self.fc4(x))
+        # x = F.relu(self.fc4(x))
         x = self.out(x)
         return x
 
 mode = shared.SPLIT_MODE_CLASSIC
 
 if mode == shared.SPLIT_MODE_CLASSIC:
-    trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(denoise_n=1)
+    trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData()
 
     # N, L, C -> N, C, L
     trainingX = trainingX.transpose(0, 2, 1)
