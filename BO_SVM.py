@@ -6,7 +6,7 @@ from sklearn.model_selection import RepeatedStratifiedKFold
 from skopt import BayesSearchCV
 
 
-trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(validationRatio=0.2, testRatio=0.2, flatten=True, normalize=True, denoise_n=10)
+trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(validationRatio=0.2, testRatio=0.2, flatten=True, normalize=True, denoise_n=8)
 trainx = np.array(trainingX[1:4000, ])
 trainy = np.array(trainingLabels[1:4000, ])
 #trainx = np.array(trainingX)
@@ -29,5 +29,5 @@ print('Best Gamma:', BO_model.best_estimator_.gamma, "\n")
 
 svm_model_new = SVC(gamma=0.01, C=100, kernel='rbf', decision_function_shape="ovr")
 svm_model_new.fit(trainx, trainy)
-pred = BO_model.predict(testx)
+pred = svm_model_new.predict(testx)
 print(classification_report(testy, pred))
