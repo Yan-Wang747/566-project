@@ -30,7 +30,7 @@ class GruModel(nn.Module):
 mode = shared.SPLIT_MODE_CLASSIC
 
 if mode == shared.SPLIT_MODE_CLASSIC:
-    trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(normalize=False)
+    trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData()
 
     trainingX = torch.from_numpy(trainingX).cuda()
     trainingLabels = torch.from_numpy(trainingLabels).long().cuda()
@@ -41,7 +41,7 @@ if mode == shared.SPLIT_MODE_CLASSIC:
 
     trainingDataset = torch.utils.data.TensorDataset(trainingX, trainingLabels)
 
-    reportName = "gru_report_rand_no_norm.txt"
+    reportName = "gru_report_rand.txt"
 
 elif mode == shared.SPLIT_MODE_BY_SUBJECT:
     reportName = "gru_report_ind.txt"

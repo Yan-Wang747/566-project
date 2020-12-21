@@ -22,7 +22,7 @@ class LogisticRegression(torch.nn.Module):
 mode = shared.SPLIT_MODE_CLASSIC
 
 if mode == shared.SPLIT_MODE_CLASSIC:
-    trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(flatten=True, normalize=False)
+    trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(flatten=True)
     trainingX = torch.from_numpy(trainingX).cuda()
     # trainingLabels = torch.from_numpy(trainingLabels).long().cuda()
     trainingLabelsOneHot = []
@@ -38,7 +38,7 @@ if mode == shared.SPLIT_MODE_CLASSIC:
 
     testX = torch.from_numpy(testX).cuda()
 
-    reportName = "linear_report_rand_no_norm.txt"
+    reportName = "linear_report_rand.txt"
 
 elif mode == shared.SPLIT_MODE_BY_SUBJECT:
     reportName = "linear_report_ind.txt"

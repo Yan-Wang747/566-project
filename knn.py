@@ -30,7 +30,7 @@ def predict(trainingSamples, trainingLabels, testSamples, k):
 runs = 1
 ks = [1, 2, 3, 4, 5]
 
-trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(validationRatio=0, testRatio=0.4, flatten=True, denoise_n=1)
+trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(validationRatio=0, testRatio=0.4, flatten=True)
 for k in ks:
     for r in range(runs):
         print("k = {}, r = {}:".format(k, r))
@@ -43,7 +43,7 @@ for k in ks:
         y_pred = classifier.predict(testX)
         
         # report = open("knn_report_ind.txt", "a")
-        report = open("knn_report_rand_no_denoise.txt", "a")
+        report = open("knn_report_rand.txt", "a")
         report.write("k = {}, r = {}:\n".format(k, r))
         report.write(classification_report(y_pred, testLabels))
         report.write('\n')

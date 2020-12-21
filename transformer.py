@@ -42,7 +42,7 @@ class TransformerModel(nn.Module):
 
     def forward(self, src, src_mask):
         src = self.pos_encoder(src)
-        output = self.transformer_encoder(src)
+        output = self.transformer_encoder(src, src_mask)
 
         output = output.transpose(0, 1)
         output = torch.reshape(output, [output.shape[0], 1, -1])

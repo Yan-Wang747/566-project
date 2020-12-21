@@ -6,7 +6,7 @@ from sklearn.model_selection import RepeatedStratifiedKFold
 from skopt import BayesSearchCV
 
 
-trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(validationRatio=0.2, testRatio=0.2, flatten=True, normalize=True, denoise_n=10)
+trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(validationRatio=0.2, testRatio=0.2, flatten=True)
 trainx = np.array(trainingX[1:4000, ])
 trainy = np.array(trainingLabels[1:4000, ])
 #trainx = np.array(trainingX)

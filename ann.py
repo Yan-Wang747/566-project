@@ -32,7 +32,7 @@ class AnnModel(nn.Module):
 mode = shared.SPLIT_MODE_CLASSIC
 
 if mode == shared.SPLIT_MODE_CLASSIC:
-    trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(flatten=True, denoise_n=1)
+    trainingX, trainingLabels, validationX, validationLabels, testX, testLabels = loadData(flatten=True)
 
     trainingX = torch.from_numpy(trainingX).cuda()
     trainingLabels = torch.from_numpy(trainingLabels).long().cuda()
@@ -43,7 +43,7 @@ if mode == shared.SPLIT_MODE_CLASSIC:
 
     trainingDataset = torch.utils.data.TensorDataset(trainingX, trainingLabels)
 
-    reportName = "ann_report_rand_no_denoise.txt"
+    reportName = "ann_report_rand.txt"
 
 elif mode == shared.SPLIT_MODE_BY_SUBJECT:
     reportName = "ann_report_ind.txt"

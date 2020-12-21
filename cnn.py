@@ -79,7 +79,7 @@ if mode == shared.SPLIT_MODE_CLASSIC:
 
     trainingDataset = torch.utils.data.TensorDataset(trainingX, trainingLabels)
 
-    reportName = "cnn_report_rand_denoise.txt"
+    reportName = "cnn_report_rand.txt"
 
 elif mode == shared.SPLIT_MODE_BY_SUBJECT:
     reportName = "cnn_report_ind.txt"
